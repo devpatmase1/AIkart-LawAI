@@ -1,9 +1,13 @@
+import os
 from dotenv import load_dotenv
 from flask import Flask, make_response, jsonify
 
 from olaw import utils
 
 load_dotenv()
+if os.path.exists(".env.example"):
+    load_dotenv(".env.example", override=False)
+
 
 
 def create_app():
