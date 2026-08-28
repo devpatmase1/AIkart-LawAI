@@ -1,0 +1,14 @@
+.env
+*.pyc
+.DS_Store
+chromadb/
+test.py
+TODO.md
+runs/
+_*/
+*.zip
+.venv/
+__pycache__/
+*.pyo
+*.pyd
+.pytest_cache/

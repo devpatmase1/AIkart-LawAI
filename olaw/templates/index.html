@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+  <head>
+    <title>aiKart OLAW — Open Legal AI Workbench</title>
+    <meta
+      name="description"
+      content="AI + Legal APIs: A Tool-Based Retrieval Augmented Generation Workbench for Legal AI UX Research."
+    />
+
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Google Fonts: Inter & Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+    <script>
+      // App-wide consts coming from the back-end
+      window.OPEN_LEGAL_RAG_CONST = {{ app_consts | safe }};
+    </script>
+
+    <link rel="stylesheet" href="/static/index.css" />
+
+    <script type="module" src="/static/components/ChatBubble.js"></script>
+    <link rel="stylesheet" href="/static/components/ChatBubble.css" />
+
+    <script type="module" src="/static/components/ChatFlow.js"></script>
+    <link rel="stylesheet" href="/static/components/ChatFlow.css" />
+
+    <script type="module" src="/static/components/ChatInput.js"></script>
+    <link rel="stylesheet" href="/static/components/ChatInput.css" />
+
+    <script type="module" src="/static/components/InspectDialog.js"></script>
+    <link rel="stylesheet" href="/static/components/InspectDialog.css" />
+
+    <script type="module" src="/static/components/SettingsDialog.js"></script>
+    <link rel="stylesheet" href="/static/components/SettingsDialog.css" />
+  </head>
+
+  <body>
+    <header class="top-nav glass-nav">
+      <div class="nav-container">
+        <div class="brand">
+          <div class="brand-logo">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="#0050FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M2 17L12 22L22 17" stroke="#0050FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M2 12L12 17L22 12" stroke="#0050FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="brand-title">
+            <span class="animated-gradient">aiKart</span> <span class="sub-brand">OLAW</span>
+          </div>
+        </div>
+
+        <div class="nav-badges">
+          <span class="glass-pill badge-pill">
+            <span class="pulse-dot"></span> Legal RAG Active
+          </span>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <div id="chat">
+        <chat-flow></chat-flow>
+        <chat-input></chat-input>
+      </div>
+
+      <footer>
+        <p>
+          <a href="https://github.com/harvard-lil/olaw" target="_blank">OLAW Workbench</a> powered by <strong>aiKart</strong> & Harvard LIL.<br />
+          Experimental legal AI research environment. Not formal legal advice.
+        </p>
+      </footer>
+    </main>
+
+    <settings-dialog></settings-dialog>
+    <inspect-dialog></inspect-dialog>
+  </body>
+</html>

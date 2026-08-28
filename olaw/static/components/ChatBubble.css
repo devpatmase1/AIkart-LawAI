@@ -1,0 +1,110 @@
+chat-bubble {
+  display: block;
+  width: fit-content;
+  max-width: 82%;
+  margin-left: auto;
+  padding: 1rem 1.25rem;
+  border-radius: 18px;
+  margin-bottom: 1.25rem;
+  line-height: 1.55;
+  position: relative;
+  font-size: 0.95rem;
+  animation: bubblePop 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes bubblePop {
+  from { opacity: 0; transform: scale(0.97) translateY(4px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* User Message Bubble */
+chat-bubble[type="user"] {
+  margin-left: auto;
+  margin-right: 0.5rem;
+  background: var(--primary);
+  color: #ffffff;
+  border-bottom-right-radius: 4px;
+  box-shadow: 0 8px 20px rgba(0, 80, 255, 0.2);
+  font-weight: 400;
+}
+
+/* AI Message Bubble */
+chat-bubble[type="ai"],
+chat-bubble[type="analyzing-request"],
+chat-bubble[type="confirm-search"],
+chat-bubble[type="sources"],
+chat-bubble[type="error"] {
+  margin-left: 0.5rem;
+  margin-right: auto;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  color: var(--foreground);
+  border-bottom-left-radius: 4px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.03);
+}
+
+chat-bubble .actor {
+  font-weight: 600;
+  font-size: 0.8rem;
+  margin-bottom: 0.4rem;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+chat-bubble code {
+  display: block;
+  padding: 0.75rem 1rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  margin-top: 0.5rem;
+  margin-bottom: 0.85rem;
+  font-size: 0.85rem;
+  font-family: 'Courier New', Courier, monospace;
+  color: #0f172a;
+}
+
+/* Actions in Confirm Search Bubble */
+chat-bubble .actions {
+  display: flex;
+  gap: 0.65rem;
+  margin-top: 0.75rem;
+}
+
+chat-bubble .actions button {
+  padding: 0.4rem 1rem;
+  font-size: 0.82rem;
+  border-radius: 9999px;
+}
+
+chat-bubble .actions button[data-action="confirm"] {
+  background: var(--primary);
+  color: #ffffff;
+}
+
+chat-bubble .actions button[data-action="reject"] {
+  background: rgba(241, 245, 249, 0.8);
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  box-shadow: none;
+}
+
+chat-bubble[type="ai"] .text {
+  white-space: pre-line;
+}
+
+chat-bubble[type="sources"] .text {
+  margin-bottom: 0.5rem;
+}
+
+chat-bubble[type="sources"] a {
+  display: inline-block;
+  padding: 0.4rem 0.75rem;
+  background: var(--primary-light);
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 0.85rem;
+}
