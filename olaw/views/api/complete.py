@@ -218,12 +218,19 @@ def post_complete():
                     config=config
                 )
 
-            def generate_gemini():
-                for chunk in response:
-                    if chunk.text:
-                        yield chunk.text
+            def generate_gemini(client_ref, stream_resp):
+                _keep_alive = client_ref  # Prevent client garbage collection during streaming
+                try:
+                    for chunk in stream_resp:
+                        try:
+                            if hasattr(chunk, "text") and chunk.text:
+                                yield chunk.text
+                        except Exception:
+                            pass
+                except Exception as stream_err:
+                    current_app.logger.error(f"Error during Gemini streaming: {stream_err}")
 
-            return Response(generate_gemini(), mimetype="text/plain")
+            return Response(generate_gemini(client, response), mimetype="text/plain")
         # OpenAI / OpenAI-compatible
         else:
             openai_client = OpenAI()
