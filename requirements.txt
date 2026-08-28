@@ -1,0 +1,10 @@
+click>=8.1.7
+flask>=3.0.0
+flask-limiter>=3.5.1
+html2text>=2020.1.16
+ollama>=0.1.6
+openai>=1.11.1
+python-dotenv>=1.0.0
+requests>=2.31.0
+google-genai>=0.1.1
+gunicorn>=21.2.0

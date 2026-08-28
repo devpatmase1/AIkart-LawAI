@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: aikart-lawai
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn wsgi:app
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: OLLAMA_API_URL
+        value: "http://localhost:11434"
+      - key: COURT_LISTENER_MAX_RESULTS
+        value: "4"
+      - key: COURT_LISTENER_API_URL
+        value: "https://www.courtlistener.com/api/rest/v3/"
+      - key: COURT_LISTENER_BASE_URL
+        value: "https://www.courtlistener.com"
