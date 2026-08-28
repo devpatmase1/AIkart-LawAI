@@ -22,6 +22,18 @@ def get_root():
 
     if not default_model:
         for model in available_models:
+            if "gemini-3.6-flash" in model or "gemini-3.5-flash" in model:
+                default_model = model
+                break
+
+    if not default_model:
+        for model in available_models:
+            if model.startswith("gemini/"):
+                default_model = model
+                break
+
+    if not default_model:
+        for model in available_models:
             if model.startswith("ollama/"):
                 default_model = model
                 break

@@ -65,7 +65,8 @@ def list_available_models() -> list:
                 model_id = getattr(m, "name", "") or getattr(m, "id", "")
                 if model_id:
                     clean_name = model_id.replace("models/", "")
-                    if clean_name.startswith("gemini-") and "embed" not in clean_name and "bidi" not in clean_name and "imagen" not in clean_name:
+                    # Filter out deprecated models (e.g. gemini-2.5-flash which returns 404 for new keys)
+                    if clean_name.startswith("gemini-") and not clean_name.startswith("gemini-2.5-") and "embed" not in clean_name and "bidi" not in clean_name and "imagen" not in clean_name:
                         models.append(f"gemini/{clean_name}")
         except Exception as e:
             try:
@@ -73,8 +74,15 @@ def list_available_models() -> list:
             except Exception:
                 pass
 
+        # Sort so gemini-3.6-flash or gemini-3.5-flash come first
+        gemini_models = [m for m in models if m.startswith("gemini/")]
+        other_models = [m for m in models if not m.startswith("gemini/")]
+        gemini_models.sort(key=lambda x: (0 if "gemini-3.6-flash" in x else (1 if "gemini-3.5-flash" in x else 2)))
+        
+        models = other_models + gemini_models
+
         # Fallback if no Gemini model matched the filter
         if len(models) == gemini_count_before:
-            models.extend(["gemini/gemini-1.5-flash", "gemini/gemini-2.0-flash", "gemini/gemini-1.5-pro"])
+            models.extend(["gemini/gemini-3.6-flash", "gemini/gemini-3.5-flash", "gemini/gemini-1.5-flash"])
 
     return models

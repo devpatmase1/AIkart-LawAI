@@ -107,11 +107,19 @@ def post_extract_search_statement():
                 temperature=temperature,
                 response_mime_type="application/json"
             )
-            response = client.models.generate_content(
-                model=target_model,
-                contents=prompt,
-                config=config
-            )
+            try:
+                response = client.models.generate_content(
+                    model=target_model,
+                    contents=prompt,
+                    config=config
+                )
+            except Exception as gemini_err:
+                current_app.logger.warning(f"Target model {target_model} failed ({gemini_err}), trying fallback gemini-3.6-flash...")
+                response = client.models.generate_content(
+                    model="gemini-3.6-flash",
+                    contents=prompt,
+                    config=config
+                )
             output = response.text
         # OpenAI / OpenAI-compatible
         else:

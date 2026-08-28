@@ -204,11 +204,19 @@ def post_complete():
                 temperature=temperature,
                 max_output_tokens=max_tokens if max_tokens else None
             )
-            response = client.models.generate_content_stream(
-                model=target_model,
-                contents=prompt,
-                config=config
-            )
+            try:
+                response = client.models.generate_content_stream(
+                    model=target_model,
+                    contents=prompt,
+                    config=config
+                )
+            except Exception as gemini_err:
+                current_app.logger.warning(f"Target model {target_model} failed streaming ({gemini_err}), trying fallback gemini-3.6-flash...")
+                response = client.models.generate_content_stream(
+                    model="gemini-3.6-flash",
+                    contents=prompt,
+                    config=config
+                )
 
             def generate_gemini():
                 for chunk in response:
