@@ -52,12 +52,12 @@ def list_available_models() -> list:
                 if name:
                     models.append(f"ollama/{name}")
 
-        except Exception:
-            current_app.logger.error("Could not list Ollama models.")
-            current_app.logger.error(traceback.format_exc())
+        except Exception as e:
+            current_app.logger.info(f"Ollama service not active: {e}")
 
     # Use case: Gemini API
     if os.environ.get("GEMINI_API_KEY"):
+        gemini_count_before = len(models)
         try:
             from google import genai
             client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
@@ -65,12 +65,16 @@ def list_available_models() -> list:
                 model_id = getattr(m, "name", "") or getattr(m, "id", "")
                 if model_id:
                     clean_name = model_id.replace("models/", "")
-                    if any(valid in clean_name for valid in ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-1.5-flash", "gemini-3.1-flash", "gemini-2.5-pro"]):
+                    if clean_name.startswith("gemini-") and "embed" not in clean_name and "bidi" not in clean_name and "imagen" not in clean_name:
                         models.append(f"gemini/{clean_name}")
         except Exception as e:
             try:
                 current_app.logger.error(f"Could not list Gemini models dynamically: {e}")
             except Exception:
                 pass
+
+        # Fallback if no Gemini model matched the filter
+        if len(models) == gemini_count_before:
+            models.extend(["gemini/gemini-1.5-flash", "gemini/gemini-2.0-flash", "gemini/gemini-1.5-pro"])
 
     return models
