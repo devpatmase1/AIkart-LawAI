@@ -7,7 +7,9 @@ openai>=1.11.1
 python-dotenv>=1.0.0
 requests>=2.31.0
 google-genai>=0.1.1
-fastapi-mcp
-fastapi>=0.100.0
+gunicorn>=21.2.0
 uvicorn>=0.30.0
+fastapi>=0.100.0
+fastapi-mcp
 mcp<2.0.0
+a2wsgi>=1.10.0
