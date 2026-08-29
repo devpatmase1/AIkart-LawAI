@@ -1,7 +1,7 @@
 """
 WSGI entrypoint for AIkart-LawAI.
 Supports Gunicorn, Render health checks (HEAD/GET /), plain JSON /health endpoint,
-APScheduler keep-alive ping job, and non-streaming MCP (Model Context Protocol) for Claude Desktop.
+APScheduler keep-alive ping job, and non-streaming plain JSON MCP tools for Claude Desktop.
 """
 import os
 import json
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 app = create_app()
 
 
-# 1. Plain JSON immediate health check
+# 1. Plain JSON immediate health check (no streaming)
 @app.route("/health", methods=["GET", "HEAD"])
 def health():
     """Immediate, non-streaming plain JSON health check."""
@@ -53,12 +53,70 @@ except Exception as e:
     logger.warning(f"Failed to start APScheduler: {e}")
 
 
+def run_text_completion_sync(message: str, model: str = None, search_results: dict = None) -> str:
+    """
+    Synchronously collects full LLM response text into a single string.
+    Never streams or yields, guaranteeing complete plain text for MCP tools.
+    """
+    available_models = list_available_models()
+    if not model or model not in available_models:
+        for m in available_models:
+            if "gemini" in m or "openai" in m or "ollama" in m:
+                model = m
+                break
+    if not model and available_models:
+        model = available_models[0]
+
+    prompt = os.environ.get(
+        "TEXT_COMPLETION_BASE_PROMPT",
+        "You are an expert legal AI assistant. Provide a comprehensive, accurate legal answer.\n\n{rag}\n\nUser Question: {request}"
+    )
+    rag_prompt = os.environ.get("TEXT_COMPLETION_RAG_PROMPT", "Context from Legal Precedents:\n{context}")
+
+    search_results_txt = ""
+    if search_results and isinstance(search_results, dict):
+        for target_key, res_list in search_results.items():
+            if isinstance(res_list, list):
+                for item in res_list:
+                    if isinstance(item, dict):
+                        search_results_txt += item.get("prompt_text", "") + "\n"
+                        search_results_txt += item.get("text", "") + "\n\n"
+
+    if search_results_txt:
+        rag_prompt = rag_prompt.replace("{context}", search_results_txt)
+        prompt = prompt.replace("{rag}", rag_prompt)
+    else:
+        prompt = prompt.replace("{rag}", "")
+
+    prompt = prompt.replace("{history}", "")
+    prompt = prompt.replace("{request}", message).strip()
+
+    # Synchronous model execution
+    if model and model.startswith("gemini"):
+        from google import genai
+        client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY") or os.environ.get("OPENAI_API_KEY"))
+        target_model = model.replace("gemini/", "")
+        resp = client.models.generate_content(model=target_model, contents=prompt)
+        return resp.text or ""
+    elif model and model.startswith("ollama"):
+        import ollama
+        client = ollama.Client(host=os.environ.get("OLLAMA_API_URL", "http://localhost:11434"))
+        resp = client.chat(model=model.replace("ollama/", ""), messages=[{"role": "user", "content": prompt}])
+        return resp["message"]["content"] or ""
+    else:
+        from openai import OpenAI
+        client = OpenAI()
+        target_model = model.replace("openai/", "") if model else "gpt-4-turbo"
+        resp = client.chat.completions.create(model=target_model, messages=[{"role": "user", "content": prompt}])
+        return resp.choices[0].message.content or ""
+
+
 # 3. MCP Server Endpoints (Non-streaming Plain JSON tool responses)
 @app.route("/mcp", methods=["GET", "HEAD", "POST"])
 def mcp_endpoint():
     """
     MCP Server endpoint for Claude Desktop.
-    Supports SSE streaming for connection handshake and JSON-RPC on POST.
+    Supports SSE streaming for endpoint handshake and JSON-RPC on POST.
     """
     if request.method == "HEAD":
         return Response("", mimetype="text/event-stream", status=200)
@@ -83,13 +141,15 @@ def mcp_endpoint():
 @app.route("/mcp/messages/", methods=["POST"])
 @app.route("/mcp/messages", methods=["POST"])
 def mcp_messages():
-    """Handle incoming JSON-RPC messages from Claude Desktop."""
+    """Handle incoming JSON-RPC messages from Claude Desktop returning plain JSON."""
     body = request.get_json(silent=True) or {}
     return handle_mcp_rpc(body)
 
 
 def handle_mcp_rpc(body):
-    """Process MCP JSON-RPC 2.0 requests returning immediate plain JSON responses."""
+    """
+    Process MCP JSON-RPC 2.0 requests returning immediate, complete, non-streaming plain JSON responses.
+    """
     req_id = body.get("id")
     method = body.get("method", "")
     params = body.get("params", {})
@@ -121,19 +181,18 @@ def handle_mcp_rpc(body):
                 "tools": [
                     {
                         "name": "search_legal_databases",
-                        "description": "Search US court opinions and legal filings using CourtListener. Returns matched cases, citations, snippet text, and court details.",
+                        "description": "Search US court opinions and legal filings using CourtListener. Returns complete case text, citations, and court details as plain JSON.",
                         "inputSchema": {
                             "type": "object",
                             "properties": {
                                 "query": {
                                     "type": "string",
-                                    "description": "The legal query, case name, citation, or legal question to search for."
+                                    "description": "The legal query, case citation, statute, or question to search for."
                                 },
                                 "target": {
                                     "type": "string",
-                                    "description": "Target legal database. Options: 'CourtListener_opinion' (court opinions) or 'CourtListener_recap' (court dockets/filings).",
-                                    "enum": ["CourtListener_opinion", "CourtListener_recap"],
-                                    "default": "CourtListener_opinion"
+                                    "description": "Target legal database (default: courtlistener).",
+                                    "default": "courtlistener"
                                 }
                             },
                             "required": ["query"]
@@ -146,6 +205,24 @@ def handle_mcp_rpc(body):
                             "type": "object",
                             "properties": {}
                         }
+                    },
+                    {
+                        "name": "complete_legal_analysis",
+                        "description": "Generate a full legal analysis for a query using CourtListener context. Returns complete text as plain JSON (non-streaming).",
+                        "inputSchema": {
+                            "type": "object",
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "description": "The legal question or analysis prompt."
+                                },
+                                "model": {
+                                    "type": "string",
+                                    "description": "Optional model to use (e.g. gemini/gemini-3.6-flash)."
+                                }
+                            },
+                            "required": ["message"]
+                        }
                     }
                 ]
             }
@@ -153,18 +230,18 @@ def handle_mcp_rpc(body):
     elif method == "tools/call":
         tool_name = params.get("name")
         args = params.get("arguments", {})
+
+        # Tool 1: Legal Search (Plain JSON response, non-streaming)
         if tool_name == "search_legal_databases":
             query = args.get("query", "")
-            target = args.get("target", "CourtListener_opinion")
-            target = target if target in SEARCH_TARGETS else "CourtListener_opinion"
+            target = "courtlistener"
             try:
                 res = route_search(target, query)
-                # Return immediate plain JSON MCP response
                 return jsonify({
                     "jsonrpc": "2.0",
                     "id": req_id,
                     "result": {
-                        "content": [{"type": "text", "text": json.dumps({target: res}, indent=2)}]
+                        "content": [{"type": "text", "text": json.dumps({"courtlistener": res}, indent=2)}]
                     }
                 })
             except Exception as e:
@@ -173,6 +250,8 @@ def handle_mcp_rpc(body):
                     "id": req_id,
                     "error": {"code": -32000, "message": str(e)}
                 }), 500
+
+        # Tool 2: List Models (Plain JSON response)
         elif tool_name == "list_available_models":
             models = list_available_models()
             return jsonify({
@@ -182,6 +261,30 @@ def handle_mcp_rpc(body):
                     "content": [{"type": "text", "text": json.dumps({"models": models}, indent=2)}]
                 }
             })
+
+        # Tool 3: Complete Legal Analysis (Plain JSON response, non-streaming)
+        elif tool_name == "complete_legal_analysis":
+            message = args.get("message", "")
+            model = args.get("model")
+            try:
+                # 1. Fetch relevant precedents first
+                search_res = route_search("courtlistener", message)
+                # 2. Run complete synchronous LLM completion (no streaming)
+                completion_text = run_text_completion_sync(message, model=model, search_results={"courtlistener": search_res})
+                return jsonify({
+                    "jsonrpc": "2.0",
+                    "id": req_id,
+                    "result": {
+                        "content": [{"type": "text", "text": completion_text}]
+                    }
+                })
+            except Exception as e:
+                return jsonify({
+                    "jsonrpc": "2.0",
+                    "id": req_id,
+                    "error": {"code": -32000, "message": str(e)}
+                }), 500
+
         else:
             return jsonify({
                 "jsonrpc": "2.0",
