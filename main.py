@@ -10,6 +10,11 @@ try:
     from fastapi_mcp import FastApiMCP
 
     fastapi_app = FastAPI(title="AIkart-LawAI MCP Server")
+
+    @fastapi_app.get("/health", summary="Immediate plain JSON health check")
+    def health():
+        return {"status": "ok"}
+
     mcp = FastApiMCP(fastapi_app)
     mcp.mount()
 except Exception:
